@@ -28,8 +28,24 @@ export const MSG = {
   ERROR: 'ERROR',
 };
 
-/** Max message size in bytes */
-const MAX_MSG_BYTES = 100 * 1024; // 100 KB
+/** WebRTC configuration with Google public STUN servers */
+const PEER_CONFIG = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+    ],
+  },
+};
+
+/** Convert 6-char room code into a valid PeerJS ID (lowercase alphanumeric) */
+function toHostPeerId(roomId) {
+  return `ph-${roomId.trim().toLowerCase()}`;
+}
 
 /** Reconnection settings */
 const RECONNECT_ATTEMPTS = 3;
@@ -136,7 +152,7 @@ export class MultiplayerTransport {
    */
   async createRoom() {
     const roomId = generateRoomCode();
-    const hostPeerId = `ph-${roomId}`;
+    const hostPeerId = toHostPeerId(roomId);
 
     this._roomId = roomId;
     this._hostPeerId = hostPeerId;
@@ -146,9 +162,7 @@ export class MultiplayerTransport {
     return new Promise((resolve, reject) => {
       let peer;
       try {
-        peer = new window.Peer(hostPeerId, {
-          debug: 1,
-        });
+        peer = new window.Peer(hostPeerId, PEER_CONFIG);
       } catch (err) {
         this._state = 'disconnected';
         reject(new Error('Failed to create Peer: ' + err.message));
@@ -158,9 +172,9 @@ export class MultiplayerTransport {
       this._peer = peer;
 
       const timeout = setTimeout(() => {
-        reject(new Error('PeerJS connection timed out'));
+        reject(new Error('Signaling server connection timed out. Please check your internet connection.'));
         this._state = 'disconnected';
-      }, 15000);
+      }, 30000);
 
       peer.on('open', (id) => {
         clearTimeout(timeout);
@@ -176,14 +190,14 @@ export class MultiplayerTransport {
 
       peer.on('error', (err) => {
         clearTimeout(timeout);
-        console.error('[Multiplayer] Peer error:', err);
+        console.error('[Multiplayer] Host Peer error:', err);
         this._state = 'disconnected';
         EventBus.emit('multiplayer:error', { error: err });
         reject(err);
       });
 
       peer.on('disconnected', () => {
-        console.warn('[Multiplayer] Peer disconnected from signalling server');
+        console.warn('[Multiplayer] Host peer disconnected from signalling server');
         this._state = 'reconnecting';
         this._attemptReconnect();
       });
@@ -202,7 +216,7 @@ export class MultiplayerTransport {
    */
   async joinRoom(roomId) {
     const normalizedId = roomId.trim().toUpperCase();
-    const hostPeerId = `ph-${normalizedId}`;
+    const hostPeerId = toHostPeerId(normalizedId);
 
     this._roomId = normalizedId;
     this._hostPeerId = hostPeerId;
@@ -212,9 +226,7 @@ export class MultiplayerTransport {
     return new Promise((resolve, reject) => {
       let peer;
       try {
-        peer = new window.Peer(undefined, {
-          debug: 1,
-        });
+        peer = new window.Peer(undefined, PEER_CONFIG);
       } catch (err) {
         this._state = 'disconnected';
         reject(new Error('Failed to create Peer: ' + err.message));
@@ -224,12 +236,12 @@ export class MultiplayerTransport {
       this._peer = peer;
 
       const timeout = setTimeout(() => {
-        reject(new Error('Connection to room timed out'));
+        reject(new Error(`Connection to room "${normalizedId}" timed out. Make sure the host has the room open.`));
         this._state = 'disconnected';
-      }, 15000);
+      }, 30000);
 
       peer.on('open', (localPeerId) => {
-        console.log(`[Multiplayer] Client peer open: ${localPeerId}, joining: ${hostPeerId}`);
+        console.log(`[Multiplayer] Client peer open: ${localPeerId}, joining host: ${hostPeerId}`);
         const conn = peer.connect(hostPeerId, {
           reliable: true,
           serialization: 'json',
@@ -240,7 +252,7 @@ export class MultiplayerTransport {
 
       peer.on('error', (err) => {
         clearTimeout(timeout);
-        console.error('[Multiplayer] Peer error:', err);
+        console.error('[Multiplayer] Client Peer error:', err);
         this._state = 'disconnected';
         EventBus.emit('multiplayer:error', { error: err });
         reject(err);
@@ -248,6 +260,15 @@ export class MultiplayerTransport {
 
       peer.on('disconnected', () => {
         console.warn('[Multiplayer] Client peer disconnected from signalling server');
+        this._state = 'reconnecting';
+        this._attemptReconnect();
+      });
+
+      peer.on('close', () => {
+        this._state = 'disconnected';
+      });
+    });
+  }
         this._state = 'reconnecting';
         this._attemptReconnect();
       });

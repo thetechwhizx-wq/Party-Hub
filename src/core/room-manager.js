@@ -106,26 +106,37 @@ export class RoomManager {
    */
   initAsClient() {
     this._isHost = false;
-    // State will come from server via ROOM_SNAPSHOT
-    // Send HELLO so host knows who we are
-    const msg = buildMessage(
-      MSG.HELLO,
-      this._transport.getRoomId(),
-      this._localPlayer.id,
-      {
-        playerInfo: {
-          id: this._localPlayer.id,
-          displayName: this._localPlayer.displayName,
-          color: this._localPlayer.color,
-          peerId: this._transport.getLocalPeerId(),
-          isReady: false,
-          isConnected: true,
-          isHost: false,
-        },
+    // Send HELLO with small retry loop in case initial packet is dropped during ICE setup
+    let attempts = 0;
+    const sendHello = () => {
+      if (this._state) return; // Snapshot received!
+      if (attempts >= 4) return;
+      attempts++;
+      const msg = buildMessage(
+        MSG.HELLO,
+        this._transport.getRoomId(),
+        this._localPlayer.id,
+        {
+          playerInfo: {
+            id: this._localPlayer.id,
+            displayName: this._localPlayer.displayName,
+            color: this._localPlayer.color,
+            peerId: this._transport.getLocalPeerId(),
+            isReady: false,
+            isConnected: true,
+            isHost: false,
+          },
+        }
+      );
+      this._transport.send(msg);
+      console.log(`[RoomManager] Sent HELLO (attempt ${attempts})`);
+      if (!this._state) {
+        setTimeout(sendHello, 1000);
       }
-    );
-    this._transport.send(msg);
-    console.log('[RoomManager] Initialised as client, sent HELLO');
+    };
+
+    // Give data channel 150ms to settle then send
+    setTimeout(sendHello, 150);
   }
 
   // ----------------------------------------------------------------
