@@ -47,6 +47,9 @@ function toHostPeerId(roomId) {
   return `ph-${roomId.trim().toLowerCase()}`;
 }
 
+/** Max message size in bytes */
+const MAX_MSG_BYTES = 100 * 1024; // 100 KB
+
 /** Reconnection settings */
 const RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 2000;
@@ -260,15 +263,6 @@ export class MultiplayerTransport {
 
       peer.on('disconnected', () => {
         console.warn('[Multiplayer] Client peer disconnected from signalling server');
-        this._state = 'reconnecting';
-        this._attemptReconnect();
-      });
-
-      peer.on('close', () => {
-        this._state = 'disconnected';
-      });
-    });
-  }
         this._state = 'reconnecting';
         this._attemptReconnect();
       });
