@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Party Hub — Play together, anywhere. Browser-based multiplayer party games." />
+  <title>Party Hub</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/games.css" />
+
+  <!-- PeerJS via CDN -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <!-- App Root -->
+  <div id="app">
+    <!-- Navigation -->
+    <nav id="main-nav" class="main-nav">
+      <div class="nav-inner">
+        <a href="#home" class="nav-logo" aria-label="Party Hub Home">
+          <span class="logo-icon">🎮</span>
+          <span class="logo-text">Party Hub</span>
+        </a>
+        <div class="nav-links">
+          <a href="#home" class="nav-link" data-route="home">Home</a>
+          <a href="#library" class="nav-link" data-route="library">Library</a>
+          <a href="#profile" class="nav-link" data-route="profile">Profile</a>
+        </div>
+        <div class="nav-actions">
+          <div id="nav-connection-status" class="connection-dot dot-disconnected" title="Not in a room"></div>
+          <button id="nav-create-btn" class="btn btn-primary btn-sm">Create Room</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main view container -->
+    <main id="view-container" class="view-container" role="main">
+      <!-- Views are rendered here by app.js -->
+      <div id="loading-screen" class="loading-screen">
+        <div class="spinner"></div>
+        <p class="text-secondary">Loading Party Hub…</p>
+      </div>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- Modal Container -->
+    <div id="modal-container" class="modal-container"></div>
+
+    <!-- Diagnostics Panel (hidden by default, toggle with Ctrl+Shift+D) -->
+    <div id="diagnostics-panel" class="diagnostics-panel hidden" role="complementary" aria-label="Developer diagnostics">
+      <div class="diag-header">
+        <span class="diag-title">🔧 Diagnostics</span>
+        <button id="diag-close-btn" class="btn btn-ghost btn-sm" aria-label="Close diagnostics">✕</button>
+      </div>
+      <div class="diag-body">
+        <div class="diag-row"><span class="diag-label">Room ID</span><span id="diag-room-id" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">Match ID</span><span id="diag-match-id" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">Player ID</span><span id="diag-player-id" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">Role</span><span id="diag-role" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">PeerJS State</span><span id="diag-peer-state" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">Game</span><span id="diag-game" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">Phase</span><span id="diag-phase" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">State Version</span><span id="diag-version" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">Last Sync</span><span id="diag-sync" class="diag-value">—</span></div>
+        <div class="diag-row"><span class="diag-label">Pending Actions</span><span id="diag-pending" class="diag-value">0</span></div>
+        <div class="diag-row"><span class="diag-label">Last Message</span><span id="diag-last-msg" class="diag-value">—</span></div>
+        <div class="diag-section-title">Recent Errors</div>
+        <div id="diag-errors" class="diag-errors"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Bootstrap -->
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
