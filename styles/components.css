@@ -1159,3 +1159,66 @@
   background: var(--border);
   margin-left: var(--space-3);
 }
+
+
+/* ============================================================
+   FLOATING EMOJI REACTIONS & DOCK
+   ============================================================ */
+.reaction-dock {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  z-index: 999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.reaction-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.reaction-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  padding: 2px 4px;
+}
+
+.reaction-btn:hover {
+  transform: scale(1.35);
+}
+
+.reaction-btn:active {
+  transform: scale(0.9);
+}
+
+.floating-emoji {
+  position: fixed;
+  font-size: 2.5rem;
+  pointer-events: none;
+  z-index: 1000;
+  animation: floatUpFade 2s ease-out forwards;
+}
+
+@keyframes floatUpFade {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.7);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-90px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-180px) scale(1);
+  }
+}

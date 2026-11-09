@@ -960,3 +960,560 @@
   font-weight: 700;
   font-size: 0.75rem;
 }
+
+
+/* ============================================================
+   YOUTUBE LIVE AUCTION SHOWDOWN
+   ============================================================ */
+.auction-arena {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.auction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.auction-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: var(--space-4);
+}
+
+@media (max-width: 900px) {
+  .auction-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.squad-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.my-squad {
+  border-left: 3px solid var(--accent-blue);
+}
+
+.opp-squad {
+  border-left: 3px solid var(--accent-red);
+}
+
+.squad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2);
+}
+
+.budget-badge {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--accent-orange);
+  background: rgba(249, 115, 22, 0.1);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+}
+
+.squad-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.empty-slot-msg {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Center Auction Block Spotlight */
+.auction-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lot-card {
+  background: linear-gradient(180deg, var(--bg-secondary), var(--bg-card));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lot-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+  margin-bottom: var(--space-3);
+}
+
+.lot-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.lot-tags {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.bid-callout {
+  background: rgba(88, 166, 255, 0.08);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: var(--space-5);
+}
+
+.bid-amount {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: var(--accent-blue);
+  line-height: 1.1;
+  font-family: monospace;
+}
+
+.bidder-status {
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.auction-controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.bid-button-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.bid-btn {
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 10px 18px;
+}
+
+.pass-btn {
+  font-size: 0.85rem;
+  color: var(--accent-red);
+}
+
+.auction-ticker {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  overflow-x: auto;
+  white-space: nowrap;
+  font-size: 0.75rem;
+}
+
+.ticker-item {
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   MATCH SIMULATION SCREEN (WHO BUILT THE BETTER SQUAD?)
+   ============================================================ */
+.simulation-screen {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.sim-scoreboard {
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.15), rgba(188, 140, 255, 0.15));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.sim-headline {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--accent-orange);
+  text-transform: uppercase;
+}
+
+.sim-score {
+  font-size: 3rem;
+  font-weight: 900;
+  margin: var(--space-2) 0;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.sim-subheadline {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+
+.sim-teams-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 650px) {
+  .sim-teams-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sim-team-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sim-winner {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 25px rgba(63, 185, 80, 0.2);
+}
+
+.sim-team-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2);
+}
+
+.sim-picks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sim-pick-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  background: var(--bg-secondary);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+}
+
+.sim-log-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.sim-log-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+
+.sim-log-entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.sim-log-row {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+.log-highlight {
+  background: rgba(63, 185, 80, 0.12);
+  border-left: 3px solid var(--accent-green);
+  color: #fff;
+  font-weight: bold;
+}
+
+.sim-stats-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.sim-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.85rem;
+}
+
+.stat-team-val {
+  font-weight: bold;
+  width: 70px;
+  text-align: center;
+}
+
+.stat-label-center {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* ============================================================
+   FIVE VS FIVE VIEW
+   ============================================================ */
+.five-v-five-view {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.scenario-banner {
+  background: linear-gradient(135deg, rgba(248, 81, 73, 0.12), rgba(88, 166, 255, 0.12));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.rosters-comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.roster-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.defender-box {
+  border-top: 3px solid var(--accent-blue);
+}
+
+.attacker-box {
+  border-top: 3px solid var(--accent-red);
+}
+
+.picks-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  min-height: 40px;
+}
+
+/* ============================================================
+   POPULARITY BATTLE ARENA
+   ============================================================ */
+.popularity-arena {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+}
+
+.versus-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 60px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+@media (max-width: 600px) {
+  .versus-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vs-divider {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--accent-orange);
+}
+
+.choice-card {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-winner-glow {
+  border-color: var(--accent-green) !important;
+  box-shadow: 0 0 25px rgba(63, 185, 80, 0.4) !important;
+}
+
+.stat-number {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.scoreboard-bar {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.score-pill {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ============================================================
+   BLIND RANKING ARENA
+   ============================================================ */
+.blind-ranking-arena {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+}
+
+.spotlight-card {
+  background: linear-gradient(180deg, var(--bg-secondary), var(--bg-card));
+  border: 2px solid var(--accent-blue);
+  box-shadow: var(--glow-blue);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.ranking-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rank-slot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.slot-filled {
+  border-left: 4px solid var(--accent-green);
+}
+
+.slot-empty {
+  border-left: 4px solid var(--border);
+}
+
+.rank-number {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--accent-orange);
+  width: 40px;
+}
+
+.benchmark-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+/* ============================================================
+   SURVIVAL INVENTORY
+   ============================================================ */
+.survival-view {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+/* ============================================================
+   COUNTER PICK DUEL
+   ============================================================ */
+.counter-pick-arena {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.duel-stage {
+  display: flex;
+  justify-content: center;
+}
+
+.duel-card {
+  padding: var(--space-6);
+  min-width: 280px;
+  text-align: center;
+  border-radius: var(--radius-xl);
+}

@@ -61,7 +61,7 @@ export function validateMessage(msg) {
  * @returns {boolean}
  */
 export function isValidRoomCode(code) {
-  return typeof code === 'string' && /^[A-Z0-9]{6}$/.test(code.trim().toUpperCase());
+  return typeof code === 'string' && /^[A-Z0-9]{6}$/.test(code.trim());
 }
 
 /**

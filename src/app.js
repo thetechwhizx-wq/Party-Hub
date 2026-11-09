@@ -12,6 +12,13 @@ import { RoomManager } from './core/room-manager.js';
 import { GameLifecycle } from './core/game-lifecycle.js';
 
 import { BudgetDraftModule } from './games/budget-draft/index.js';
+import { FiveVsFiveModule } from './games/five-vs-five/index.js';
+import { PopularityBattleModule } from './games/popularity-battle/index.js';
+import { BlindRankingModule } from './games/blind-ranking/index.js';
+import { SurvivalInventoryModule } from './games/survival-inventory/index.js';
+import { CounterPickModule } from './games/counter-pick/index.js';
+import { Sound } from './core/audio.js';
+import { ChatSystem } from './shared/chat.js';
 
 import { initRouter, registerRoute, navigate, setNavConnectionState } from './ui/navigation.js';
 import { renderGameLibrary } from './ui/game-library.js';
@@ -26,6 +33,7 @@ let localPlayer = null;
 let transport = null;
 let roomManager = null;
 let lifecycle = null;
+let chatSystem = null;
 
 const viewContainer = document.getElementById('view-container');
 
@@ -131,6 +139,7 @@ export function showModal({ title, body, actions = [] }) {
 // ================================================================
 
 function cleanupRoom() {
+  if (chatSystem) { chatSystem.unmountDock(); chatSystem = null; }
   if (lifecycle) { lifecycle.destroy(); lifecycle = null; }
   if (roomManager) { roomManager.destroy(); roomManager = null; }
   if (transport) { transport.disconnect(); transport = null; }
@@ -153,6 +162,10 @@ async function createRoom() {
     roomManager.initAsHost();
 
     lifecycle = new GameLifecycle(roomManager, transport, localPlayer);
+
+    // Mount floating emoji reaction dock
+    chatSystem = new ChatSystem(transport, localPlayer);
+    chatSystem.mountDock(document.body);
 
     // Default game
     roomManager.selectGame('budget-draft', {});
@@ -194,6 +207,10 @@ async function joinRoom(roomCode) {
     roomManager.initAsClient();
 
     lifecycle = new GameLifecycle(roomManager, transport, localPlayer);
+
+    // Mount floating emoji reaction dock
+    chatSystem = new ChatSystem(transport, localPlayer);
+    chatSystem.mountDock(document.body);
 
     setNavConnectionState('connected');
     updateDiagnosticsPanel();
@@ -640,6 +657,17 @@ function wireGlobalEvents() {
   // Nav create button
   document.getElementById('nav-create-btn')?.addEventListener('click', createRoom);
 
+  // Nav sound toggle
+  const soundBtn = document.getElementById('nav-sound-btn');
+  if (soundBtn) {
+    soundBtn.textContent = Sound.isMuted() ? '🔇' : '🔊';
+    soundBtn.addEventListener('click', () => {
+      const isMuted = Sound.toggleMute();
+      soundBtn.textContent = isMuted ? '🔇' : '🔊';
+      showToast(isMuted ? 'Audio Muted' : 'Audio Enabled', '', 'info', 1500);
+    });
+  }
+
   // Room state changes → re-render lobby
   EventBus.on('room:state-changed', (state) => {
     if (!state) return;
@@ -732,8 +760,13 @@ async function bootstrap() {
     localPlayer = PlayerManager.getLocalPlayer();
     console.log('[App] Local player:', localPlayer.displayName, localPlayer.id.slice(0, 8));
 
-    // 3. Register game modules
+    // 3. Register game modules (All 6 YouTube / Internet games)
     GameRegistry.register(BudgetDraftModule);
+    GameRegistry.register(FiveVsFiveModule);
+    GameRegistry.register(PopularityBattleModule);
+    GameRegistry.register(BlindRankingModule);
+    GameRegistry.register(SurvivalInventoryModule);
+    GameRegistry.register(CounterPickModule);
     console.log('[App] Games registered:', GameRegistry.count());
 
     // 4. Init diagnostics

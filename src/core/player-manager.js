@@ -50,10 +50,10 @@ function pickColor(seed) {
 export function getAvatarInitials(name) {
   if (!name) return '?';
   const parts = name.trim().split(/[\s#_-]+/);
-  if (parts.length >= 2 && parts[0] && parts[1]) {
+  if (parts.length >= 2 && parts[0] && parts[1] && !/^\d+$/.test(parts[1])) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
-  return name.slice(0, 2).toUpperCase();
+  return (parts[0] || name).slice(0, 2).toUpperCase();
 }
 
 /** Singleton: the current local player */

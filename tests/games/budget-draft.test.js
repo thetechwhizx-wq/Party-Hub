@@ -305,8 +305,5 @@ async function runAllTests() {
   return { passed, failed, results };
 }
 
-export { runAllTests };
-
-if (typeof document !== 'undefined' && document.currentScript) {
-  runAllTests();
-}
+// Auto-run
+runAllTests();

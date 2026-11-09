@@ -64,7 +64,6 @@ if (typeof window !== 'undefined') {
 } else {
   // Node environment — polyfill
   global.localStorage = mockLocalStorage;
-  global.crypto = { randomUUID: () => `test-${Math.random().toString(36).slice(2)}` };
 }
 
 // ================================================================
@@ -274,10 +273,5 @@ async function runAllTests() {
   return { passed, failed, results };
 }
 
-// Auto-run if this is the entry point
-export { runAllTests };
-
-// If loaded directly (not as module in test runner), run immediately
-if (typeof document !== 'undefined' && document.currentScript) {
-  runAllTests();
-}
+// Auto-run
+runAllTests();

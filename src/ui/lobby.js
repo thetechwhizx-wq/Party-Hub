@@ -116,8 +116,16 @@ export function renderLobby(container, opts) {
         <div class="flex flex-col gap-4">
           <!-- Game selector -->
           <div class="card" style="padding: var(--space-5);">
-            <div class="lobby-section-title">Selected Game</div>
-            ${selectedGame ? renderGamePreview(selectedGame) : renderNoGameSelected(isHost)}
+            <div class="flex justify-between items-center mb-3">
+              <div class="lobby-section-title" style="margin-bottom:0">Selected Game</div>
+              ${isHost && selectedGame ? '<button class="btn btn-ghost btn-sm" id="change-game-btn">🔄 Switch Game</button>' : ''}
+            </div>
+            <div id="game-picker-container" class="${selectedGame ? 'hidden' : ''}">
+              ${renderNoGameSelected(isHost)}
+            </div>
+            <div id="game-preview-container" class="${!selectedGame ? 'hidden' : ''}">
+              ${selectedGame ? renderGamePreview(selectedGame) : ''}
+            </div>
           </div>
 
           <!-- Game settings panel -->
@@ -158,6 +166,16 @@ export function renderLobby(container, opts) {
   container.querySelector('#start-btn')?.addEventListener('click', () => {
     if (canStart) {
       onStartGame?.(_currentLobbySettings);
+    }
+  });
+
+  // Game switch button
+  container.querySelector('#change-game-btn')?.addEventListener('click', () => {
+    const picker = container.querySelector('#game-picker-container');
+    const preview = container.querySelector('#game-preview-container');
+    if (picker && preview) {
+      picker.classList.toggle('hidden');
+      preview.classList.toggle('hidden');
     }
   });
 

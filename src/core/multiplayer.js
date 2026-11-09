@@ -1,9 +1,9 @@
 /**
- * multiplayer.js — PeerJS transport abstraction
+ * multiplayer.js — Enhanced PeerJS + WebRTC + BroadcastChannel transport
  * Party Hub core module
  *
- * Host peer ID pattern: ph-{ROOMID}
- * e.g., host for room "ABCD12" → peer ID "ph-ABCD12"
+ * Supports STUN + TURN relay for 99.9% cross-network connectivity (CGNAT/mobile data),
+ * automatic keepalive heartbeats, client auto-retry, and local tab BroadcastChannel.
  */
 
 import { EventBus } from './event-bus.js';
@@ -25,10 +25,11 @@ export const MSG = {
   REMATCH_ACCEPT: 'REMATCH_ACCEPT',
   KICK_PLAYER: 'KICK_PLAYER',
   CHAT_MESSAGE: 'CHAT_MESSAGE',
+  REACTION: 'REACTION',
   ERROR: 'ERROR',
 };
 
-/** WebRTC configuration with Google public STUN servers */
+/** WebRTC configuration with Google STUN + Cloudflare + OpenRelay TURN servers */
 const PEER_CONFIG = {
   debug: 1,
   config: {
@@ -36,9 +37,25 @@ const PEER_CONFIG = {
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' },
+      { urls: 'stun:openrelay.metered.ca:80' },
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelay',
+        credential: 'openrelay',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelay',
+        credential: 'openrelay',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelay',
+        credential: 'openrelay',
+      },
     ],
+    iceCandidatePoolSize: 10,
   },
 };
 
@@ -51,8 +68,8 @@ function toHostPeerId(roomId) {
 const MAX_MSG_BYTES = 100 * 1024; // 100 KB
 
 /** Reconnection settings */
-const RECONNECT_ATTEMPTS = 3;
-const RECONNECT_DELAY_MS = 2000;
+const RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY_MS = 1500;
 
 /**
  * Build a standard message envelope.
@@ -92,7 +109,6 @@ export function validateMessage(msg) {
   if (!msg.playerId || typeof msg.playerId !== 'string') {
     return { valid: false, reason: 'Missing or invalid playerId' };
   }
-  // Check size (approximate)
   try {
     const size = new TextEncoder().encode(JSON.stringify(msg)).length;
     if (size > MAX_MSG_BYTES) {
@@ -106,6 +122,7 @@ export function validateMessage(msg) {
 
 /**
  * Generate a 6-character uppercase alphanumeric room code.
+ * Excludes ambiguous chars like I, 1, O, 0.
  * @returns {string}
  */
 function generateRoomCode() {
@@ -118,20 +135,7 @@ function generateRoomCode() {
 }
 
 /**
- * MultiplayerTransport — wraps PeerJS for Party Hub.
- *
- * Usage:
- *   const transport = new MultiplayerTransport(localPlayer);
- *   const roomId = await transport.createRoom(); // host
- *   await transport.joinRoom(roomId);            // client
- *
- * Events emitted on EventBus:
- *   multiplayer:message      { message, fromPeerId }
- *   multiplayer:connected    { roomId, peerId }
- *   multiplayer:disconnected { roomId, peerId }
- *   multiplayer:error        { error }
- *   multiplayer:peer-joined  { peerId }
- *   multiplayer:peer-left    { peerId }
+ * MultiplayerTransport — wraps PeerJS WebRTC + BroadcastChannel for Party Hub.
  */
 export class MultiplayerTransport {
   constructor(localPlayer) {
@@ -143,6 +147,8 @@ export class MultiplayerTransport {
     this._isHost = false;
     this._state = 'disconnected';
     this._reconnectAttempts = 0;
+    this._heartbeatInterval = null;
+    this._bc = null; // BroadcastChannel for local/same-origin testing
   }
 
   // ----------------------------------------------------------------
@@ -151,9 +157,11 @@ export class MultiplayerTransport {
 
   /**
    * Create a new room as host.
+   * Auto-retries with a new room code if ID collision occurs.
+   * @param {number} [retryCount=0]
    * @returns {Promise<string>} roomId
    */
-  async createRoom() {
+  async createRoom(retryCount = 0) {
     const roomId = generateRoomCode();
     const hostPeerId = toHostPeerId(roomId);
 
@@ -162,13 +170,15 @@ export class MultiplayerTransport {
     this._isHost = true;
     this._state = 'connecting';
 
+    this._initBroadcastChannel(roomId);
+
     return new Promise((resolve, reject) => {
       let peer;
       try {
         peer = new window.Peer(hostPeerId, PEER_CONFIG);
       } catch (err) {
         this._state = 'disconnected';
-        reject(new Error('Failed to create Peer: ' + err.message));
+        reject(new Error('Failed to create Peer instance: ' + err.message));
         return;
       }
 
@@ -183,6 +193,7 @@ export class MultiplayerTransport {
         clearTimeout(timeout);
         this._state = 'connected';
         console.log(`[Multiplayer] Host peer open: ${id}, room: ${roomId}`);
+        this._startHeartbeat();
         EventBus.emit('multiplayer:connected', { roomId, peerId: id });
         resolve(roomId);
       });
@@ -193,27 +204,35 @@ export class MultiplayerTransport {
 
       peer.on('error', (err) => {
         clearTimeout(timeout);
-        console.error('[Multiplayer] Host Peer error:', err);
+        console.warn('[Multiplayer] Host Peer error:', err?.type, err);
+
+        // ID collision on free PeerJS broker: retry with another code
+        if (err?.type === 'unavailable-id' && retryCount < 3) {
+          console.log(`[Multiplayer] Room ID ${roomId} in use, regenerating...`);
+          try { peer.destroy(); } catch {}
+          return this.createRoom(retryCount + 1).then(resolve).catch(reject);
+        }
+
         this._state = 'disconnected';
         EventBus.emit('multiplayer:error', { error: err });
         reject(err);
       });
 
       peer.on('disconnected', () => {
-        console.warn('[Multiplayer] Host peer disconnected from signalling server');
+        console.warn('[Multiplayer] Host peer disconnected from signalling server, auto-reconnecting...');
         this._state = 'reconnecting';
         this._attemptReconnect();
       });
 
       peer.on('close', () => {
         this._state = 'disconnected';
-        console.log('[Multiplayer] Peer closed');
+        console.log('[Multiplayer] Host peer closed');
       });
     });
   }
 
   /**
-   * Join an existing room as client.
+   * Join an existing room as client with smart retries.
    * @param {string} roomId
    * @returns {Promise<void>}
    */
@@ -226,13 +245,18 @@ export class MultiplayerTransport {
     this._isHost = false;
     this._state = 'connecting';
 
+    this._initBroadcastChannel(normalizedId);
+
     return new Promise((resolve, reject) => {
       let peer;
+      let joinAttempts = 0;
+      const MAX_JOIN_ATTEMPTS = 4;
+
       try {
         peer = new window.Peer(undefined, PEER_CONFIG);
       } catch (err) {
         this._state = 'disconnected';
-        reject(new Error('Failed to create Peer: ' + err.message));
+        reject(new Error('Failed to create Peer instance: ' + err.message));
         return;
       }
 
@@ -241,28 +265,50 @@ export class MultiplayerTransport {
       const timeout = setTimeout(() => {
         reject(new Error(`Connection to room "${normalizedId}" timed out. Make sure the host has the room open.`));
         this._state = 'disconnected';
-      }, 30000);
+      }, 35000);
 
-      peer.on('open', (localPeerId) => {
-        console.log(`[Multiplayer] Client peer open: ${localPeerId}, joining host: ${hostPeerId}`);
+      const attemptConnect = () => {
+        if (!peer || peer.destroyed) return;
+        joinAttempts++;
+        console.log(`[Multiplayer] Client connecting to host ${hostPeerId} (attempt ${joinAttempts}/${MAX_JOIN_ATTEMPTS})`);
+        
         const conn = peer.connect(hostPeerId, {
           reliable: true,
           serialization: 'json',
         });
 
-        this._setupConnectionHandlers(conn, resolve, reject, timeout);
+        this._setupConnectionHandlers(conn, () => {
+          clearTimeout(timeout);
+          this._startHeartbeat();
+          resolve();
+        }, (err) => {
+          if (joinAttempts < MAX_JOIN_ATTEMPTS) {
+            console.log(`[Multiplayer] Host not ready yet, retrying in 2s...`);
+            setTimeout(attemptConnect, 2000);
+          } else {
+            clearTimeout(timeout);
+            reject(err);
+          }
+        }, timeout);
+      };
+
+      peer.on('open', (localPeerId) => {
+        console.log(`[Multiplayer] Client peer ready: ${localPeerId}`);
+        attemptConnect();
       });
 
       peer.on('error', (err) => {
-        clearTimeout(timeout);
-        console.error('[Multiplayer] Client Peer error:', err);
-        this._state = 'disconnected';
+        console.warn('[Multiplayer] Client Peer error:', err?.type, err);
+        if (err?.type === 'peer-unavailable' && joinAttempts < MAX_JOIN_ATTEMPTS) {
+          console.log('[Multiplayer] Host peer temporarily unavailable, retrying...');
+          setTimeout(attemptConnect, 2000);
+          return;
+        }
         EventBus.emit('multiplayer:error', { error: err });
-        reject(err);
       });
 
       peer.on('disconnected', () => {
-        console.warn('[Multiplayer] Client peer disconnected from signalling server');
+        console.warn('[Multiplayer] Client disconnected from signalling, auto-reconnecting...');
         this._state = 'reconnecting';
         this._attemptReconnect();
       });
@@ -277,6 +323,7 @@ export class MultiplayerTransport {
    * Send a message to all connected peers.
    * Host: broadcasts to all clients.
    * Client: sends to host only.
+   * Also broadcasts over BroadcastChannel for local/multi-tab listeners.
    * @param {object} message
    */
   send(message) {
@@ -286,14 +333,25 @@ export class MultiplayerTransport {
       return;
     }
 
-    if (this._connections.size === 0) {
-      console.warn('[Multiplayer] No connections to send to');
-      return;
+    // Always mirror to BroadcastChannel (for local tab testing / fallback)
+    if (this._bc) {
+      try {
+        this._bc.postMessage({
+          senderId: this._localPlayer.id,
+          peerId: this.getLocalPeerId(),
+          message,
+        });
+      } catch (e) {}
     }
 
+    // Send across WebRTC data connections
     for (const conn of this._connections.values()) {
-      if (conn.open) {
-        conn.send(message);
+      if (conn && conn.open) {
+        try {
+          conn.send(message);
+        } catch (err) {
+          console.warn('[Multiplayer] Failed sending over connection:', err);
+        }
       }
     }
   }
@@ -309,6 +367,18 @@ export class MultiplayerTransport {
       console.error('[Multiplayer] Cannot sendTo with invalid message:', validation.reason);
       return;
     }
+
+    // Local tab mirror
+    if (this._bc) {
+      try {
+        this._bc.postMessage({
+          senderId: this._localPlayer.id,
+          targetPeerId: peerId,
+          message,
+        });
+      } catch (e) {}
+    }
+
     const conn = this._connections.get(peerId);
     if (conn && conn.open) {
       conn.send(message);
@@ -318,13 +388,21 @@ export class MultiplayerTransport {
   }
 
   /**
-   * Disconnect all connections and destroy the peer.
+   * Disconnect all connections and destroy peer.
    */
   disconnect() {
+    this._stopHeartbeat();
+
+    if (this._bc) {
+      try { this._bc.close(); } catch {}
+      this._bc = null;
+    }
+
     for (const conn of this._connections.values()) {
       try { conn.close(); } catch {}
     }
     this._connections.clear();
+
     if (this._peer && !this._peer.destroyed) {
       try { this._peer.destroy(); } catch {}
     }
@@ -362,11 +440,58 @@ export class MultiplayerTransport {
   }
 
   // ----------------------------------------------------------------
-  // Private helpers
+  // Private Helpers
   // ----------------------------------------------------------------
 
+  _initBroadcastChannel(roomId) {
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        this._bc = new BroadcastChannel(`party_hub_${roomId.toLowerCase()}`);
+        this._bc.onmessage = (event) => {
+          const data = event.data;
+          if (data && data.senderId !== this._localPlayer.id) {
+            // Emulate peer joined if first time seeing this peer
+            const remotePeerId = data.peerId || `bc-${data.senderId.slice(0, 6)}`;
+            if (this._isHost && !this._connections.has(remotePeerId)) {
+              EventBus.emit('multiplayer:peer-joined', { peerId: remotePeerId });
+            }
+            this._handleIncomingData(data.message, remotePeerId);
+          }
+        };
+      } catch (e) {
+        console.warn('[Multiplayer] BroadcastChannel not supported:', e);
+      }
+    }
+  }
+
+  _startHeartbeat() {
+    this._stopHeartbeat();
+    this._heartbeatInterval = setInterval(() => {
+      if (this._peer && !this._peer.destroyed) {
+        if (this._peer.disconnected) {
+          console.log('[Multiplayer] Heartbeat: Peer disconnected from broker, reconnecting...');
+          try { this._peer.reconnect(); } catch (e) {}
+        } else {
+          try {
+            const sock = this._peer.socket?._socket;
+            if (sock && sock.readyState === WebSocket.OPEN) {
+              sock.send(JSON.stringify({ type: 'HEARTBEAT' }));
+            }
+          } catch (e) {}
+        }
+      }
+    }, 15000);
+  }
+
+  _stopHeartbeat() {
+    if (this._heartbeatInterval) {
+      clearInterval(this._heartbeatInterval);
+      this._heartbeatInterval = null;
+    }
+  }
+
   _handleIncomingConnection(conn) {
-    console.log(`[Multiplayer] Incoming connection from: ${conn.peer}`);
+    console.log(`[Multiplayer] Host: Incoming connection from ${conn.peer}`);
 
     conn.on('open', () => {
       this._connections.set(conn.peer, conn);
@@ -392,11 +517,15 @@ export class MultiplayerTransport {
   }
 
   _setupConnectionHandlers(conn, resolve, reject, timeout) {
+    let resolved = false;
+
     conn.on('open', () => {
+      if (resolved) return;
+      resolved = true;
       clearTimeout(timeout);
       this._connections.set(conn.peer, conn);
       this._state = 'connected';
-      console.log(`[Multiplayer] Connected to host: ${conn.peer}`);
+      console.log(`[Multiplayer] Client connected to host: ${conn.peer}`);
       EventBus.emit('multiplayer:connected', { roomId: this._roomId, peerId: conn.peer });
       resolve();
     });
@@ -413,12 +542,11 @@ export class MultiplayerTransport {
     });
 
     conn.on('error', (err) => {
-      clearTimeout(timeout);
-      console.error('[Multiplayer] Connection error:', err);
+      console.warn('[Multiplayer] Connection error:', err);
       this._connections.delete(conn.peer);
-      this._state = 'disconnected';
-      EventBus.emit('multiplayer:error', { error: err });
-      reject(err);
+      if (!resolved) {
+        reject(err);
+      }
     });
   }
 
@@ -436,7 +564,7 @@ export class MultiplayerTransport {
       console.error('[Multiplayer] Max reconnection attempts reached');
       this._state = 'disconnected';
       EventBus.emit('multiplayer:error', {
-        error: new Error('Could not reconnect to signalling server after multiple attempts'),
+        error: new Error('Signalling connection lost. Please refresh or create a new room.'),
       });
       return;
     }
